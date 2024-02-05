@@ -9,17 +9,18 @@ def count_pages_in_folder(folder):
         print(f"The folder '{folder}' does not exist.")
         return
 
-    for filename in os.listdir(folder):
-        if filename.endswith(".pdf"):
-            file_path = os.path.join(folder, filename)
+    for root, _, files in os.walk(folder):
+        for filename in files:
+            if filename.endswith(".pdf"):
+                file_path = os.path.join(root, filename)
 
-            with open(file_path, "rb") as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                num_pages = len(pdf_reader.pages)
+                with open(file_path, "rb") as file:
+                    pdf_reader = PyPDF2.PdfReader(file)
+                    num_pages = len(pdf_reader.pages)
 
-                total_pages += num_pages
+                    total_pages += num_pages
 
-                print(f"The file '{filename}' contains {num_pages} pages.")
+                    print(f"The file '{filename}' at '{file_path}' contains {num_pages} pages.")
 
     print(f"\nTotal pages in all PDF files: {total_pages}")
 
