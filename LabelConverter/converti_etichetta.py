@@ -87,9 +87,9 @@ def build_a4_pdf(input_path: Path, output_path: Path, max_scale: float = MAX_SCA
     with open(output_path, "wb") as f:
         writer.write(f)
 
-    print(f"✔  Output file  : {output_path.name}")
-    print(f"   Original size : {src_w:.0f} × {src_h:.0f} pt")
-    print(f"   Scale applied : {scale:.1%}  →  {scaled_w:.0f} × {scaled_h:.0f} pt on A4")
+    print(f"[OK] Output file  : {output_path.name}")
+    print(f"     Original size : {src_w:.0f} x {src_h:.0f} pt")
+    print(f"     Scale applied : {scale:.1%} -> {scaled_w:.0f} x {scaled_h:.0f} pt on A4")
 
 
 def main():

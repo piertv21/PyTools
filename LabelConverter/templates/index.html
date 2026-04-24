@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Converti le etichette di spedizione in formato PDF stampabile A4, centrato e ridimensionato." />
+    <title>Label Converter — Etichetta → A4</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <style>
+        /* ── Reset & Tokens ─────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-primary:   #0b0f19;
+            --bg-card:      rgba(255, 255, 255, 0.04);
+            --bg-card-hover:rgba(255, 255, 255, 0.07);
+            --border:       rgba(255, 255, 255, 0.08);
+            --accent:       #6c63ff;
+            --accent-glow:  rgba(108, 99, 255, 0.35);
+            --accent-light: #a78bfa;
+            --text-primary: #f0f0f5;
+            --text-muted:   #8b8fa3;
+            --success:      #34d399;
+            --error:        #f87171;
+            --radius:       16px;
+            --font:         'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        html { font-size: 16px; }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ── Animated background blobs ──────────────────────────────── */
+        body::before,
+        body::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: .4;
+            z-index: 0;
+            pointer-events: none;
+        }
+        body::before {
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, #6c63ff 0%, transparent 70%);
+            top: -150px; left: -100px;
+            animation: float-blob 14s ease-in-out infinite alternate;
+        }
+        body::after {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, #a78bfa 0%, transparent 70%);
+            bottom: -120px; right: -80px;
+            animation: float-blob 18s ease-in-out infinite alternate-reverse;
+        }
+
+        @keyframes float-blob {
+            0%   { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(60px, 40px) scale(1.15); }
+        }
+
+        /* ── Card ───────────────────────────────────────────────────── */
+        .card {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 480px;
+            margin: 24px;
+            background: var(--bg-card);
+            backdrop-filter: blur(24px) saturate(1.4);
+            -webkit-backdrop-filter: blur(24px) saturate(1.4);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 48px 36px;
+            box-shadow:
+                0 0 80px rgba(108, 99, 255, 0.08),
+                0 24px 48px rgba(0, 0, 0, 0.4);
+            transition: box-shadow .3s ease;
+        }
+        .card:hover {
+            box-shadow:
+                0 0 100px rgba(108, 99, 255, 0.14),
+                0 32px 64px rgba(0, 0, 0, 0.5);
+        }
+
+        /* ── Header ─────────────────────────────────────────────────── */
+        .header { text-align: center; margin-bottom: 36px; }
+
+        .header .icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 64px; height: 64px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            margin-bottom: 18px;
+            box-shadow: 0 8px 24px var(--accent-glow);
+            animation: pulse-icon 3s ease-in-out infinite;
+        }
+        @keyframes pulse-icon {
+            0%, 100% { box-shadow: 0 8px 24px var(--accent-glow); }
+            50%      { box-shadow: 0 12px 36px rgba(108, 99, 255, 0.5); }
+        }
+        .header .icon svg { width: 30px; height: 30px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+        .header h1 {
+            font-size: 1.65rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header p {
+            margin-top: 8px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        /* ── Drop zone ──────────────────────────────────────────────── */
+        .dropzone {
+            position: relative;
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 40px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color .3s, background .3s;
+        }
+        .dropzone:hover,
+        .dropzone.drag-over {
+            border-color: var(--accent);
+            background: rgba(108, 99, 255, 0.06);
+        }
+        .dropzone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .dropzone-icon { margin-bottom: 12px; }
+        .dropzone-icon svg { width: 40px; height: 40px; stroke: var(--text-muted); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; transition: stroke .3s; }
+        .dropzone:hover .dropzone-icon svg,
+        .dropzone.drag-over .dropzone-icon svg { stroke: var(--accent-light); }
+
+        .dropzone-label {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+        .dropzone-label strong { color: var(--accent-light); }
+
+        .file-name {
+            margin-top: 12px;
+            font-size: 0.82rem;
+            color: var(--accent-light);
+            word-break: break-all;
+            min-height: 1.2em;
+        }
+
+        /* ── Button ─────────────────────────────────────────────────── */
+        .btn {
+            display: block;
+            width: 100%;
+            margin-top: 28px;
+            padding: 14px;
+            font-family: var(--font);
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #fff;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: transform .15s ease, box-shadow .25s ease, opacity .25s ease;
+            box-shadow: 0 4px 16px var(--accent-glow);
+        }
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(108, 99, 255, 0.45);
+        }
+        .btn:active:not(:disabled) { transform: translateY(0); }
+        .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+        /* Spinner inside button */
+        .btn .spinner {
+            display: none;
+            width: 20px; height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin .6s linear infinite;
+            margin: 0 auto;
+        }
+        .btn.loading .btn-text { display: none; }
+        .btn.loading .spinner   { display: block; }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ── Feedback message ───────────────────────────────────────── */
+        .message {
+            margin-top: 18px;
+            text-align: center;
+            font-size: 0.85rem;
+            min-height: 1.4em;
+            transition: color .3s;
+        }
+        .message.success { color: var(--success); }
+        .message.error   { color: var(--error); }
+
+        /* ── Footer ─────────────────────────────────────────────────── */
+        .footer {
+            margin-top: 32px;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            opacity: .6;
+        }
+    </style>
+</head>
+<body>
+    <main class="card" id="card">
+        <!-- Header -->
+        <div class="header">
+            <div class="icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="12" y1="18" x2="12" y2="12"/>
+                    <polyline points="9 15 12 12 15 15"/>
+                </svg>
+            </div>
+            <h1>Label Converter</h1>
+            <p>Carica un'etichetta di spedizione PDF e ottieni un file A4 pronto per la stampa.</p>
+        </div>
+
+        <!-- Upload form -->
+        <form id="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+            <div class="dropzone" id="dropzone">
+                <div class="dropzone-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                </div>
+                <div class="dropzone-label">
+                    <strong>Clicca</strong> o trascina qui il PDF
+                </div>
+                <div class="file-name" id="file-name"></div>
+                <input type="file" name="file" id="file-input" accept=".pdf" required />
+            </div>
+
+            <button class="btn" type="submit" id="submit-btn" disabled>
+                <span class="btn-text">Converti in A4</span>
+                <span class="spinner"></span>
+            </button>
+        </form>
+
+        <div class="message" id="message"></div>
+
+        <div class="footer">pypdf &middot; Flask &middot; Render</div>
+    </main>
+
+    <script>
+        const dropzone  = document.getElementById('dropzone');
+        const fileInput = document.getElementById('file-input');
+        const fileName  = document.getElementById('file-name');
+        const form      = document.getElementById('upload-form');
+        const btn       = document.getElementById('submit-btn');
+        const msg       = document.getElementById('message');
+
+        /* ── Drag & drop visual feedback ────────────────────────── */
+        ['dragenter', 'dragover'].forEach(e =>
+            dropzone.addEventListener(e, ev => { ev.preventDefault(); dropzone.classList.add('drag-over'); })
+        );
+        ['dragleave', 'drop'].forEach(e =>
+            dropzone.addEventListener(e, ev => { ev.preventDefault(); dropzone.classList.remove('drag-over'); })
+        );
+        dropzone.addEventListener('drop', ev => {
+            const files = ev.dataTransfer.files;
+            if (files.length) {
+                fileInput.files = files;
+                fileInput.dispatchEvent(new Event('change'));
+            }
+        });
+
+        /* ── File selected ──────────────────────────────────────── */
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) {
+                fileName.textContent = fileInput.files[0].name;
+                btn.disabled = false;
+                msg.textContent = '';
+                msg.className = 'message';
+            } else {
+                fileName.textContent = '';
+                btn.disabled = true;
+            }
+        });
+
+        /* ── Async upload via fetch → download blob ─────────────── */
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            btn.classList.add('loading');
+            btn.disabled = true;
+            msg.textContent = '';
+            msg.className = 'message';
+
+            const formData = new FormData(form);
+
+            try {
+                const res = await fetch('/upload', { method: 'POST', body: formData });
+
+                if (!res.ok) {
+                    const data = await res.json().catch(() => null);
+                    throw new Error(data?.error || `Errore del server (${res.status})`);
+                }
+
+                /* Extract filename from Content-Disposition header */
+                const disposition = res.headers.get('Content-Disposition') || '';
+                const match = disposition.match(/filename="?(.+?)"?$/i);
+                const dlName = match ? match[1] : 'etichetta_A4.pdf';
+
+                const blob = await res.blob();
+                const url  = URL.createObjectURL(blob);
+                const a    = document.createElement('a');
+                a.href = url;
+                a.download = dlName;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+
+                msg.textContent = '✔ Conversione completata — download avviato!';
+                msg.className = 'message success';
+            } catch (err) {
+                msg.textContent = err.message;
+                msg.className = 'message error';
+            } finally {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
