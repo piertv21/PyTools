@@ -11,4 +11,4 @@ RUN mkdir -p /app/uploads
 
 EXPOSE 10000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:10000", "--workers", "2", "--timeout", "120", "main:app"]
+CMD ["sh", "-c", "[ -f .env ] || cp .env.example .env; gunicorn --bind 0.0.0.0:10000 --workers 2 --timeout 120 main:app"]
